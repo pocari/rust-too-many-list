@@ -39,6 +39,15 @@ impl List {
     }
 }
 
+impl Drop for List {
+    fn drop(&mut self) {
+        let mut cur_link = mem::replace(&mut self.head, Link::Empty);
+        while let Link::More(mut boxed_node) = cur_link {
+            cur_link = mem::replace(&mut boxed_node.next, Link::Empty);
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::List;
@@ -64,5 +73,17 @@ mod test {
         assert_eq!(list.pop(), Some(1));
 
         assert_eq!(list.pop(), None);
+    }
+
+    #[test]
+    fn stack_overflow_check() {
+        // ListのDropトレイトが無い状態でギリギリstack overflowが発生する状態にしてから
+        // Dropトレイトを実装するとstack overflowが起こらなくなる（=drop時に再帰が発生せずにスタックが
+        let mut list = List::new();
+
+        for i in 0..26177 {
+            list.push(i);
+        }
+        assert_eq!(list.pop(), Some(26176));
     }
 }
