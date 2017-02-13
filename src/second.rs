@@ -87,6 +87,26 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
+pub struct IterMut<'a, T: 'a> {
+    next: Option<&'a mut Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        IterMut { next: self.head.as_mut().map(|node| &mut **node) }
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_mut().map(|node| &mut **node);
+            &mut node.elem
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::List;
@@ -175,5 +195,23 @@ mod test {
 
         // iterはlistへの参照を持っているだけなのでここでlistはまだ使える
         println!("{:?}", list);
+    }
+
+    #[test]
+    fn iter_mut() {
+        let mut list: List<i32> = List::new();
+
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        let mut i = list.iter_mut();
+        assert_eq!(i.next(), Some(&mut 3));
+        assert_eq!(i.next(), Some(&mut 2));
+        assert_eq!(i.next(), Some(&mut 1));
+        assert_eq!(i.next(), None);
+
+        // iter_mutはlistへのmutableな参照を持っているのでここでimmutableなlistの参照を作ることが出来なくてエラーになる
+        // println!("{:?}", list);
     }
 }
